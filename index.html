@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FNF Rhythm Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(45deg, #1a1a2e, #16213e, #0f3460);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .game-area {
+            width: 600px;
+            height: 80vh;
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid #ff6b9d;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tracks-container {
+            display: flex;
+            height: 100%;
+            position: relative;
+        }
+
+        .track {
+            flex: 1;
+            border-right: 2px solid #333;
+            position: relative;
+            background: linear-gradient(to bottom, rgba(255, 107, 157, 0.1), rgba(255, 107, 157, 0.05));
+        }
+
+        .track:last-child {
+            border-right: none;
+        }
+
+        .track.left { background: linear-gradient(to bottom, rgba(255, 0, 0, 0.1), rgba(255, 0, 0, 0.05)); }
+        .track.down { background: linear-gradient(to bottom, rgba(0, 255, 255, 0.1), rgba(0, 255, 255, 0.05)); }
+        .track.up { background: linear-gradient(to bottom, rgba(0, 255, 0, 0.1), rgba(0, 255, 0, 0.05)); }
+        .track.right { background: linear-gradient(to bottom, rgba(255, 255, 0, 0.1), rgba(255, 255, 0, 0.05)); }
+
+        .hit-zone {
+            position: absolute;
+            bottom: 80px;
+            width: 100%;
+            height: 60px;
+            border: 3px solid #ff6b9d;
+            border-radius: 10px;
+            background: rgba(255, 107, 157, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .note {
+            position: absolute;
+            width: 90%;
+            height: 50px;
+            border-radius: 10px;
+            left: 5%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            animation: fall linear;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .note.left {
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+            color: white;
+        }
+
+        .note.down {
+            background: linear-gradient(45deg, #00d2d3, #01a3a4);
+            color: white;
+        }
+
+        .note.up {
+            background: linear-gradient(45deg, #2ed573, #1e824c);
+            color: white;
+        }
+
+        .note.right {
+            background: linear-gradient(45deg, #ffa502, #ff6348);
+            color: white;
+        }
+
+        @keyframes fall {
+            from {
+                top: -60px;
+            }
+            to {
+                top: 100%;
+            }
+        }
+
+        .ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+        }
+
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ff6b9d;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .combo {
+            font-size: 18px;
+            color: #00d2d3;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            text-align: right;
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .hit-effect {
+            position: absolute;
+            bottom: 80px;
+            width: 100%;
+            height: 60px;
+            pointer-events: none;
+            border-radius: 10px;
+            animation: hitFlash 0.2s ease-out;
+        }
+
+        @keyframes hitFlash {
+            0% { background: rgba(255, 255, 255, 0.8); }
+            100% { background: transparent; }
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .start-screen h1 {
+            font-size: 48px;
+            color: #ff6b9d;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+        }
+
+        .start-button {
+            padding: 15px 30px;
+            font-size: 20px;
+            background: linear-gradient(45deg, #ff6b9d, #ff8fab);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .start-button:hover {
+            transform: scale(1.05);
+        }
+
+        .track.active {
+            background: rgba(255, 107, 157, 0.3) !important;
+        }
+
+        /* Mobile Controls */
+        .mobile-controls {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 200;
+            gap: 15px;
+        }
+
+        .mobile-controls.show {
+            display: flex;
+        }
+
+        .mobile-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 3px solid #ff6b9d;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            touch-action: manipulation;
+            transition: all 0.1s;
+        }
+
+        .mobile-btn:active {
+            transform: scale(0.9);
+            background: rgba(255, 107, 157, 0.5);
+        }
+
+        .mobile-btn.left { border-color: #ff4757; background: rgba(255, 71, 87, 0.2); }
+        .mobile-btn.down { border-color: #00d2d3; background: rgba(0, 210, 211, 0.2); }
+        .mobile-btn.up { border-color: #2ed573; background: rgba(46, 213, 115, 0.2); }
+        .mobile-btn.right { border-color: #ffa502; background: rgba(255, 165, 2, 0.2); }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .game-area {
+                width: 95vw;
+                height: 70vh;
+                margin-bottom: 120px;
+            }
+            
+            .ui {
+                font-size: 18px;
+            }
+            
+            .instructions {
+                display: none;
+            }
+            
+            .start-screen h1 {
+                font-size: 36px;
+            }
+            
+            .note {
+                height: 40px;
+                font-size: 18px;
+            }
+            
+            .hit-zone {
+                height: 50px;
+                font-size: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .game-area {
+                width: 98vw;
+                height: 65vh;
+            }
+            
+            .mobile-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 20px;
+            }
+            
+            .mobile-controls {
+                gap: 10px;
+            }
+            
+            .start-screen h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="start-screen" id="startScreen">
+            <h1>🎵 FNF Rhythm Game 🎵</h1>
+            <p style="margin-bottom: 30px; text-align: center; font-size: 18px;">
+                <span id="desktopInstructions">Use arrow keys to hit the notes!<br>← ↓ ↑ →</span>
+                <span id="mobileInstructions" style="display: none;">Tap the buttons to hit the notes!<br>🎵 Perfect timing = Higher score! 🎵</span>
+            </p>
+            <button class="start-button" onclick="startGame()">Start Game</button>
+        </div>
+
+        <div class="game-area">
+            <div class="ui">
+                <div class="score">Score: <span id="score">0</span></div>
+                <div class="combo">Combo: <span id="combo">0</span></div>
+            </div>
+
+            <div class="instructions">
+                <div>← A key</div>
+                <div>↓ S key</div>
+                <div>↑ W key</div>
+                <div>→ D key</div>
+            </div>
+
+            <div class="tracks-container">
+                <div class="track left" data-key="ArrowLeft">
+                    <div class="hit-zone">←</div>
+                </div>
+                <div class="track down" data-key="ArrowDown">
+                    <div class="hit-zone">↓</div>
+                </div>
+                <div class="track up" data-key="ArrowUp">
+                    <div class="hit-zone">↑</div>
+                </div>
+                <div class="track right" data-key="ArrowRight">
+                    <div class="hit-zone">→</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mobile-controls" id="mobileControls">
+        <div class="mobile-btn left" data-track="left">←</div>
+        <div class="mobile-btn down" data-track="down">↓</div>
+        <div class="mobile-btn up" data-track="up">↑</div>
+        <div class="mobile-btn right" data-track="right">→</div>
+    </div>
+
+    <script>
+        class RhythmGame {
+            constructor() {
+                this.score = 0;
+                this.combo = 0;
+                this.gameStarted = false;
+                this.notes = [];
+                this.noteSpeed = 3000; // milliseconds for note to fall
+                this.spawnRate = 800; // milliseconds between notes
+                this.tracks = ['left', 'down', 'up', 'right'];
+                this.keyMap = {
+                    'ArrowLeft': 'left',
+                    'ArrowDown': 'down',
+                    'ArrowUp': 'up',
+                    'ArrowRight': 'right',
+                    'KeyA': 'left',
+                    'KeyS': 'down',
+                    'KeyW': 'up',
+                    'KeyD': 'right'
+                };
+                
+                this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                this.setupMobileControls();
+                this.setupEventListeners();
+                this.createBeatPattern();
+            }
+
+            setupEventListeners() {
+                document.addEventListener('keydown', (e) => {
+                    if (!this.gameStarted) return;
+                    
+                    const track = this.keyMap[e.code];
+                    if (track) {
+                        this.handleKeyPress(track);
+                        this.showTrackActive(track);
+                    }
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    const track = this.keyMap[e.code];
+                    if (track) {
+                        this.hideTrackActive(track);
+                    }
+                });
+            }
+
+            setupMobileControls() {
+                if (this.isMobile) {
+                    document.getElementById('mobileControls').classList.add('show');
+                    
+                    // Touch events for mobile buttons
+                    const mobileButtons = document.querySelectorAll('.mobile-btn');
+                    mobileButtons.forEach(btn => {
+                        const track = btn.dataset.track;
+                        
+                        // Touch start
+                        btn.addEventListener('touchstart', (e) => {
+                            e.preventDefault();
+                            if (!this.gameStarted) return;
+                            this.handleKeyPress(track);
+                            this.showTrackActive(track);
+                        });
+                        
+                        // Touch end
+                        btn.addEventListener('touchend', (e) => {
+                            e.preventDefault();
+                            this.hideTrackActive(track);
+                        });
+                        
+                        // Prevent context menu
+                        btn.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+                        });
+                    });
+                }
+            }
+
+            showTrackActive(track) {
+                const trackElement = document.querySelector(`.track.${track}`);
+                trackElement.classList.add('active');
+            }
+
+            hideTrackActive(track) {
+                const trackElement = document.querySelector(`.track.${track}`);
+                trackElement.classList.remove('active');
+            }
+
+            createBeatPattern() {
+                // Create a simple beat pattern
+                this.beatPattern = [
+                    { time: 1000, track: 'left' },
+                    { time: 1500, track: 'down' },
+                    { time: 2000, track: 'up' },
+                    { time: 2500, track: 'right' },
+                    { time: 3000, track: 'left' },
+                    { time: 3200, track: 'down' },
+                    { time: 3400, track: 'up' },
+                    { time: 3600, track: 'right' },
+                    { time: 4000, track: 'down' },
+                    { time: 4500, track: 'up' },
+                    { time: 5000, track: 'left' },
+                    { time: 5200, track: 'right' },
+                    { time: 5400, track: 'left' },
+                    { time: 5600, track: 'down' },
+                    { time: 6000, track: 'up' },
+                    { time: 6500, track: 'right' },
+                ];
+            }
+
+            start() {
+                this.gameStarted = true;
+                document.getElementById('startScreen').style.display = 'none';
+                
+                // Show mobile controls if on mobile
+                if (this.isMobile) {
+                    document.getElementById('mobileControls').classList.add('show');
+                }
+                
+                // Start spawning notes based on beat pattern
+                this.beatPattern.forEach(beat => {
+                    setTimeout(() => {
+                        this.spawnNote(beat.track);
+                    }, beat.time);
+                });
+
+                // Continue with random pattern after initial pattern
+                setTimeout(() => {
+                    this.startRandomPattern();
+                }, 7000);
+            }
+
+            startRandomPattern() {
+                setInterval(() => {
+                    if (this.gameStarted) {
+                        const randomTrack = this.tracks[Math.floor(Math.random() * this.tracks.length)];
+                        this.spawnNote(randomTrack);
+                    }
+                }, this.spawnRate);
+            }
+
+            spawnNote(track) {
+                const trackElement = document.querySelector(`.track.${track}`);
+                const note = document.createElement('div');
+                note.className = `note ${track}`;
+                note.textContent = this.getArrowSymbol(track);
+                note.style.animationDuration = `${this.noteSpeed}ms`;
+                
+                trackElement.appendChild(note);
+                this.notes.push({
+                    element: note,
+                    track: track,
+                    startTime: Date.now()
+                });
+
+                // Remove note after animation
+                setTimeout(() => {
+                    if (note.parentNode) {
+                        note.parentNode.removeChild(note);
+                        this.notes = this.notes.filter(n => n.element !== note);
+                        // Miss penalty
+                        this.combo = 0;
+                        this.updateUI();
+                    }
+                }, this.noteSpeed);
+            }
+
+            getArrowSymbol(track) {
+                const symbols = {
+                    'left': '←',
+                    'down': '↓',
+                    'up': '↑',
+                    'right': '→'
+                };
+                return symbols[track];
+            }
+
+            handleKeyPress(track) {
+                const trackNotes = this.notes.filter(note => 
+                    note.track === track && note.element.parentNode
+                );
+
+                if (trackNotes.length === 0) {
+                    // No notes to hit, combo break
+                    this.combo = 0;
+                    this.updateUI();
+                    return;
+                }
+
+                // Find the note closest to the hit zone
+                const currentTime = Date.now();
+                let closestNote = null;
+                let closestDistance = Infinity;
+
+                trackNotes.forEach(note => {
+                    const noteAge = currentTime - note.startTime;
+                    const expectedHitTime = this.noteSpeed - 500; // Hit zone timing
+                    const distance = Math.abs(noteAge - expectedHitTime);
+                    
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestNote = note;
+                    }
+                });
+
+                if (closestNote && closestDistance < 300) { // Hit tolerance
+                    // Successful hit
+                    this.hitNote(closestNote, closestDistance);
+                } else {
+                    // Miss
+                    this.combo = 0;
+                    this.updateUI();
+                }
+            }
+
+            hitNote(note, distance) {
+                // Remove the note
+                if (note.element.parentNode) {
+                    note.element.parentNode.removeChild(note.element);
+                }
+                this.notes = this.notes.filter(n => n !== note);
+
+                // Calculate score based on accuracy
+                let points = 100;
+                if (distance < 50) points = 300; // Perfect
+                else if (distance < 100) points = 200; // Great
+                else if (distance < 150) points = 150; // Good
+
+                this.score += points * (this.combo + 1);
+                this.combo++;
+
+                // Show hit effect
+                this.showHitEffect(note.track);
+                this.updateUI();
+            }
+
+            showHitEffect(track) {
+                const trackElement = document.querySelector(`.track.${track}`);
+                const effect = document.createElement('div');
+                effect.className = 'hit-effect';
+                trackElement.appendChild(effect);
+
+                setTimeout(() => {
+                    if (effect.parentNode) {
+                        effect.parentNode.removeChild(effect);
+                    }
+                }, 200);
+            }
+
+            updateUI() {
+                document.getElementById('score').textContent = this.score;
+                document.getElementById('combo').textContent = this.combo;
+            }
+        }
+
+        let game;
+
+        function startGame() {
+            // Show appropriate instructions
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                document.getElementById('desktopInstructions').style.display = 'none';
+                document.getElementById('mobileInstructions').style.display = 'block';
+            }
+            
+            game = new RhythmGame();
+            game.start();
+        }
+
+        // Initialize game object for setup
+        game = new RhythmGame();
+    </script>
+</body>
+</html>
